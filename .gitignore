@@ -1,12 +1,155 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
+#include <FL/Fl.H>
+#include <FL/Fl_Window.H>
+#include <FL/Fl_Box.H>
+#include <FL/Fl_Scroll.H>
+#include <FL/Fl_Menu_Bar.H>
+#include <FL/Fl_Button.H>
+#include <iostream>
+#include <fstream>
+#include <conio.h>
+#include <FL/fl_draw.H>
+#include <FL/Fl_Shared_Image.H>
+#include <FL/Fl_Native_File_Chooser.H>
+#include <FL/Fl_BMP_Image.H>
+#include <FL/Fl_GIF_Image.H>
+#include <FL/Fl_Image.H>
+#include <limits>
+#define length(x) (sizeof(x)/sizeof(x[0]))
+#define XYZ_BOX FL_FREE_BOXTYPE
+#include <FL/Fl_Double_Window.H>
+#define window_size 400
+#include <string>
 
-# Compiled Dynamic libraries
-*.so
+using namespace std;
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+static Fl_Double_Window *main_window = 0; // the main app window
+static Fl_Offscreen offscreen_buffer = 0; // the offscreen surface
+char* archivo ;
+
+
+class dibi : public Fl_Box {
+public:
+dibi(int x, int y, int w, int h, int* centro, double zoom);
+int arrayF(string coor, int xy);
+void mTexto(char* filename);
+char* archivo;
+double xZoom;
+void setZoom(int zoom);
+void setArchivo(char* pArchivo);
+int* Center;
+string lineas[10000];
+void redraw();
+};
+/*****************************************************************************/
+/* Constructor */
+dibi::dibi(int x, int y, int w, int h, int* centro, double zoom) : Fl_Box(x,y,w,h){
+               
+               xZoom = zoom;
+               Center = centro;
+} // Constructor
+/*****************************************************************************/
+
+void dibi::setArchivo(char* pArchivo){
+     archivo = pArchivo;}
+     
+void dibi::setZoom(int zoom){
+     xZoom = zoom;}
+
+
+int dibi::arrayF (string coor, int xy){
+      int largo = coor.size();
+      int x;
+      bool linea = false;
+      bool coma = false;
+      string nStr;
+      string nStr1;
+      for(int i=0; i < largo-1; i++){
+                   if (coor[i] > '9'){}
+                   else if(!linea){if(coor[i]== ','){ linea = true;}
+                              else if(coor[i] >= '.'){nStr += coor[i];};}
+                   else if(coma){break;}  
+                   else{if(coor[i]== ','){if(!coma){coma = true;}} else if(coor[i] >= '.'){nStr1 += coor[i];};}     
+              } 
+      if(xy == 0){x = (int)atof(nStr.c_str());}
+      else{x = (int)atof(nStr1.c_str());}
+      return x;
+      }
+
+void dibi::mTexto(char* filename)
+{
+string Linea;
+int i=0;
+bool c = false;
+
+ifstream Archivo (filename);  
+ 
+if (Archivo.is_open()){
+
+                            while(!c){
+                                             getline (Archivo,Linea);
+                                             if(!(Archivo.good())){lineas[i] = '@'; c = true;}
+                                             else if((int)Linea[0] == 0){}
+                                             else if(Linea[0] == 'F'){
+                                                                 lineas[i] = Linea;
+                                             i++;}
+                                             else if(Linea[3] == '+'){lineas[i] = '%'; lineas[i+1] = Linea; i+=2;}
+                                             else if(Linea[0] == 'S'){lineas[i] = '%'; i++;}
+                                             else if(Linea[5] == '('){
+                                                                 lineas[i] = Linea;
+                                             i++;}
+                            }
+
+    } 
+    Archivo.close();   
+   
+}
+void dibi::redraw(){
+     mTexto(archivo);
+    int i = 3;
+    int consx = arrayF(lineas[1],0) - 100;
+    int consy = arrayF(lineas[1],1) + 4000;
+    bool dibuja = true;
+    while(dibuja){
+                 if(lineas[i+1][0] == '@'){dibuja = false;}
+                 else if(lineas[i+1][0] == '%'){i+=2;}
+                 else{int arr[2] = {arrayF(lineas[i],0),arrayF(lineas[i],1)};
+                 int arr1[2] = {arrayF(lineas[i+1],0),arrayF(lineas[i+1],1)};
+                 fl_line((arr[0]-consx)/xZoom,(((arr[1]*-1)+consy)/xZoom)+25,(arr1[0]-consx)/xZoom,(((arr1[1]*-1)+consy)/xZoom)+25);
+                 i++;}};
+    Fl::run();
+     }
+
+
+
+
+
+double xZoom = 16;
+int ventana[] = {1400,1000};
+int xyCentral[] = {(int)(ventana[0]/(xZoom*8)),(int)(ventana[1]/(xZoom*32))};
+static dibi *os_box;
+
+
+Fl_Native_File_Chooser fnc;
+void Menu_CB_Open(Fl_Widget* w,void*) { fnc.show(); os_box-> setArchivo((char*)fnc.filename(0)); archivo = (char*)fnc.filename(0); os_box->redraw(); main_window->label(archivo);}
+void Menu_CB_Quit(Fl_Widget* w,void*) {main_window->label("Salir seleccionado");main_window->hide();}
+void ZoomI(Fl_Widget* w,void*) { xZoom/=2;os_box->setZoom(xZoom);os_box->redraw();  main_window->label("ZOOM seleccionado");}
+void ZoomO(Fl_Widget* w,void*) { xZoom*=2;os_box->setZoom(xZoom);os_box->redraw(); main_window->label("ZOOM seleccionado");}
+double e = numeric_limits<double>::epsilon( );
+
+
+
+int main(int argc, char ** argv) {
+// Open the application window and menu bar with callbacks
+    main_window = new Fl_Double_Window(ventana[0], ventana[1],"");       
+    main_window->begin();
+    Fl_Menu_Bar menubar(0, 0, main_window->w(), 25);
+    menubar.add("&Archivo/&Abrir", 0, Menu_CB_Open);
+    menubar.add("&Archivo/&Salir", 0, Menu_CB_Quit);    
+    menubar.add("&+", 0, ZoomI);
+    menubar.add("&-", 0, ZoomO);  
+    os_box = new dibi(0,25,ventana[0],(ventana[1])-25 ,xyCentral,xZoom); 
+    main_window->resizable(os_box);      
+    main_window->end();
+    main_window->show(argc, argv);
+return Fl::run();
+}
