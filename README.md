@@ -8,6 +8,7 @@
 
 # Estudiantes : Michael Montano Bermúdez 
 #               Gabriel Barrantes Rodas
+#               Grupo # 1
 # Documentación
 ### Introducción
    El objetivo de este proyecto es la lectura y despliegue de archivos tipo shapefile, leídos en su respectiva conversión a ascii, utilizando el lenguaje C++ se realizara la implementación de las funcionalidades de leer, dibujar, zoom al área observada, tanto acercamiento como alejamiento.
