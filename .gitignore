@@ -37,23 +37,29 @@ double xZoom;
 void setZoom(int zoom);
 void setArchivo(char* pArchivo);
 int* Center;
+bool arT;
 string lineas[10000];
-void redraw();
+void setCentro(int* centro);
+void draw();
 };
 /*****************************************************************************/
 /* Constructor */
 dibi::dibi(int x, int y, int w, int h, int* centro, double zoom) : Fl_Box(x,y,w,h){
-               
+               arT = false;
                xZoom = zoom;
                Center = centro;
 } // Constructor
 /*****************************************************************************/
 
 void dibi::setArchivo(char* pArchivo){
+     arT = true;
      archivo = pArchivo;}
      
 void dibi::setZoom(int zoom){
      xZoom = zoom;}
+     
+void dibi::setCentro(int* centro){
+     Center = centro;}
 
 
 int dibi::arrayF (string coor, int xy){
@@ -103,7 +109,8 @@ if (Archivo.is_open()){
     Archivo.close();   
    
 }
-void dibi::redraw(){
+void dibi::draw(){
+     if (arT){
      mTexto(archivo);
     int i = 3;
     int consx = arrayF(lineas[1],0) - 100;
@@ -112,11 +119,10 @@ void dibi::redraw(){
     while(dibuja){
                  if(lineas[i+1][0] == '@'){dibuja = false;}
                  else if(lineas[i+1][0] == '%'){i+=2;}
-                 else{int arr[2] = {arrayF(lineas[i],0),arrayF(lineas[i],1)};
-                 int arr1[2] = {arrayF(lineas[i+1],0),arrayF(lineas[i+1],1)};
-                 fl_line((arr[0]-consx)/xZoom,(((arr[1]*-1)+consy)/xZoom)+25,(arr1[0]-consx)/xZoom,(((arr1[1]*-1)+consy)/xZoom)+25);
-                 i++;}};
-    Fl::run();
+                 else{int arr[2] = {arrayF(lineas[i],0)-consx,(arrayF(lineas[i],1)*-1)+consy};
+                 int arr1[2] = {arrayF(lineas[i+1],0)-consx,(arrayF(lineas[i+1],1)*-1)+consy};
+                 fl_line((arr[0]/xZoom)+Center[0],(arr[1]/xZoom)+25+Center[1],(arr1[0]/xZoom)+Center[0],(arr1[1]/xZoom)+25+Center[1]);
+                 i++;}};}
      }
 
 
@@ -125,15 +131,18 @@ void dibi::redraw(){
 
 double xZoom = 16;
 int ventana[] = {1400,1000};
-int xyCentral[] = {(int)(ventana[0]/(xZoom*8)),(int)(ventana[1]/(xZoom*32))};
+int xyCentral[] = {0,0};
 static dibi *os_box;
-
 
 Fl_Native_File_Chooser fnc;
 void Menu_CB_Open(Fl_Widget* w,void*) { fnc.show(); os_box-> setArchivo((char*)fnc.filename(0)); archivo = (char*)fnc.filename(0); os_box->redraw(); main_window->label(archivo);}
 void Menu_CB_Quit(Fl_Widget* w,void*) {main_window->label("Salir seleccionado");main_window->hide();}
-void ZoomI(Fl_Widget* w,void*) { xZoom/=2;os_box->setZoom(xZoom);os_box->redraw();  main_window->label("ZOOM seleccionado");}
+void ZoomI(Fl_Widget* w,void*) { xZoom/=2;os_box->setZoom(xZoom);os_box->redraw(); main_window->label("ZOOM seleccionado");}
 void ZoomO(Fl_Widget* w,void*) { xZoom*=2;os_box->setZoom(xZoom);os_box->redraw(); main_window->label("ZOOM seleccionado");}
+void MoveUP(Fl_Widget* w,void*) { xyCentral[1]-= 10;os_box->setCentro(xyCentral);os_box->redraw(); main_window->label("MOVER seleccionado");}
+void MoveDOWN(Fl_Widget* w,void*) { xyCentral[1]+= 10;os_box->setCentro(xyCentral);os_box->redraw(); main_window->label("MOVER seleccionado");}
+void MoveRIGHT(Fl_Widget* w,void*) { xyCentral[0]+= 10;os_box->setCentro(xyCentral);os_box->redraw(); main_window->label("MOVER seleccionado");}
+void MoveLEFT(Fl_Widget* w,void*) { xyCentral[0]-= 10;os_box->setCentro(xyCentral);os_box->redraw(); main_window->label("MOVER seleccionado");}
 double e = numeric_limits<double>::epsilon( );
 
 
@@ -142,14 +151,20 @@ int main(int argc, char ** argv) {
 // Open the application window and menu bar with callbacks
     main_window = new Fl_Double_Window(ventana[0], ventana[1],"");       
     main_window->begin();
+    main_window->color(FL_WHITE);
     Fl_Menu_Bar menubar(0, 0, main_window->w(), 25);
     menubar.add("&Archivo/&Abrir", 0, Menu_CB_Open);
     menubar.add("&Archivo/&Salir", 0, Menu_CB_Quit);    
     menubar.add("&+", 0, ZoomI);
-    menubar.add("&-", 0, ZoomO);  
-    os_box = new dibi(0,25,ventana[0],(ventana[1])-25 ,xyCentral,xZoom); 
+    menubar.add("&-", 0, ZoomO);
+    menubar.add("&UP", 0, MoveUP);  
+    menubar.add("&DOWN", 0, MoveDOWN); 
+    menubar.add("&LEFT", 0, MoveLEFT); 
+    menubar.add("&RIGHT", 0, MoveRIGHT); 
+    os_box = new dibi(0,25,ventana[0],(ventana[1])-25 ,xyCentral,xZoom);
     main_window->resizable(os_box);      
     main_window->end();
     main_window->show(argc, argv);
 return Fl::run();
 }
+
